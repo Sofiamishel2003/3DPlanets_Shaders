@@ -105,7 +105,7 @@ fn main() {
 
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
     let mut window = Window::new(
-        "Rust Graphics - 3D Model Starship",
+        "Rust Graphics - 3D Sphere",
         window_width,
         window_height,
         WindowOptions::default(),
@@ -117,11 +117,11 @@ fn main() {
 
     framebuffer.set_background_color(0x333355);
 
-    let mut translation = Vec3::new(300.0, 200.0, 0.0);
+    let mut translation = Vec3::new(window_width as f32 / 2.0, window_height as f32 / 2.0, 0.0);
     let mut rotation = Vec3::new(0.0, 0.0, 0.0);
     let mut scale = 100.0f32;
 
-    let obj = Obj::load("assets/spaceShip1.obj").expect("Failed to load obj");
+    let obj = Obj::load("assets/sphere.obj").expect("Failed to load obj");
     let vertex_arrays = obj.get_vertex_array(); 
 
     while window.is_open() {
