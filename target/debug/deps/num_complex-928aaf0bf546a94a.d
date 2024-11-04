@@ -1,0 +1,10 @@
+C:\Users\50250\Desktop\Sofía Mishell Velásquez UVG\Tercer Año 2024\Segundo Semestre\Graficas\3D_Model\target\debug\deps\libnum_complex-928aaf0bf546a94a.rmeta: C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\lib.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\cast.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\pow.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\complex_float.rs
+
+C:\Users\50250\Desktop\Sofía Mishell Velásquez UVG\Tercer Año 2024\Segundo Semestre\Graficas\3D_Model\target\debug\deps\libnum_complex-928aaf0bf546a94a.rlib: C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\lib.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\cast.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\pow.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\complex_float.rs
+
+C:\Users\50250\Desktop\Sofía Mishell Velásquez UVG\Tercer Año 2024\Segundo Semestre\Graficas\3D_Model\target\debug\deps\num_complex-928aaf0bf546a94a.d: C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\lib.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\cast.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\pow.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\complex_float.rs
+
+C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\lib.rs:
+C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\cast.rs:
+C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\pow.rs:
+C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\num-complex-0.4.6\src\complex_float.rs:

@@ -1,0 +1,10 @@
+C:\Users\50250\Desktop\Sofía Mishell Velásquez UVG\Tercer Año 2024\Segundo Semestre\Graficas\3D_Model\target\debug\deps\libversion_check-72f021916fa233be.rmeta: C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src/lib.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\version.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\channel.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\date.rs
+
+C:\Users\50250\Desktop\Sofía Mishell Velásquez UVG\Tercer Año 2024\Segundo Semestre\Graficas\3D_Model\target\debug\deps\libversion_check-72f021916fa233be.rlib: C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src/lib.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\version.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\channel.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\date.rs
+
+C:\Users\50250\Desktop\Sofía Mishell Velásquez UVG\Tercer Año 2024\Segundo Semestre\Graficas\3D_Model\target\debug\deps\version_check-72f021916fa233be.d: C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src/lib.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\version.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\channel.rs C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\date.rs
+
+C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src/lib.rs:
+C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\version.rs:
+C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\channel.rs:
+C:\Users\50250\.cargo\registry\src\index.crates.io-6f17d22bba15001f\version_check-0.9.5\src\date.rs:
