@@ -1,55 +1,60 @@
-use nalgebra_glm::{Vec3, dot};
+use nalgebra_glm::{Vec3, dot, Vec2};
 use crate::fragment::Fragment;
-use crate::vertex::Vertex;
-use crate::line::line;
+use crate::vertex::{self, Vertex};
 use crate::color::Color;
 
-pub fn _triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
-    let mut fragments = Vec::new();
-
-    fragments.extend(line(v1, v2));
-    fragments.extend(line(v2, v3));
-    fragments.extend(line(v3, v1));
-
-    fragments
-}
-  
 pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
-    let mut fragments = Vec::new();
-    let (a, b, c) = (v1.transformed_position, v2.transformed_position, v3.transformed_position);
-  
-    let (min_x, min_y, max_x, max_y) = calculate_bounding_box(&a, &b, &c);
-  
-    let light_dir = Vec3::new(0.0, 0.0, -1.0);
-  
-    let triangle_area = edge_function(&a, &b, &c);
-  
-    // Iterate over each pixel in the bounding box
-    for y in min_y..=max_y {
-      for x in min_x..=max_x {
-        let point = Vec3::new(x as f32 + 0.5, y as f32 + 0.5, 0.0);
-  
-        // coordenadas
-        let (w1, w2, w3) = barycentric_coordinates(&point, &a, &b, &c, triangle_area);
-        //verificación del punto
-        if w1 >= 0.0 && w1 <= 1.0 && 
-           w2 >= 0.0 && w2 <= 1.0 &&
-           w3 >= 0.0 && w3 <= 1.0 {
-          let normal = v1.transformed_normal;
-          let normal = normal.normalize();
-          let intensity = dot(&normal, &light_dir).max(0.0);
-  
-          let base_color = Color::new(100, 100, 100); // gris
-          let lit_color = base_color * intensity;
-  
-          let depth = a.z;
-  
-          fragments.push(Fragment::new(x as f32, y as f32, lit_color, depth));
-        }
+  let mut fragments = Vec::new();
+  let (a, b, c) = (v1.transformed_position, v2.transformed_position, v3.transformed_position);
+
+  let (min_x, min_y, max_x, max_y) = calculate_bounding_box(&a, &b, &c);
+
+  let light_dir = Vec3::new(0.0, 0.0, 1.0);
+
+  let triangle_area = edge_function(&a, &b, &c);
+
+  // Iterate over each pixel in the bounding box
+  for y in min_y..=max_y {
+    for x in min_x..=max_x {
+      let point = Vec3::new(x as f32 + 0.5, y as f32 + 0.5, 0.0);
+
+      // Calculate barycentric coordinates
+      let (w1, w2, w3) = barycentric_coordinates(&point, &a, &b, &c, triangle_area);
+
+      // Check if the point is inside the triangle
+      if w1 >= 0.0 && w1 <= 1.0 && 
+         w2 >= 0.0 && w2 <= 1.0 &&
+         w3 >= 0.0 && w3 <= 1.0 {
+
+        // Interpolate normal
+        let normal = v1.transformed_normal * w1 + v2.transformed_normal * w2 + v3.transformed_normal * w3;
+        let normal = normal.normalize();
+
+        // Calculate lighting intensity
+        let intensity = dot(&normal, &light_dir).max(0.0);
+
+        // Create a gray color (unchanged)
+        let color = Color::new(100, 100, 100); // Medium gray
+
+        // Interpolate depth
+        let depth = a.z * w1 + b.z * w2 + c.z * w3;
+
+        // Positions of the original vertex
+        let vertex_position = v1.position * w1 + v2.position * w2 + v3.position * w3;
+
+        fragments.push(Fragment::new(
+            Vec2::new(x as f32, y as f32),
+            color,
+            depth,
+            normal,
+            intensity,
+            vertex_position,
+        ));
       }
     }
-  
-    fragments
+  }
+
+  fragments
 }
 
 fn calculate_bounding_box(v1: &Vec3, v2: &Vec3, v3: &Vec3) -> (i32, i32, i32, i32) {
@@ -72,3 +77,4 @@ fn barycentric_coordinates(p: &Vec3, a: &Vec3, b: &Vec3, c: &Vec3, area: f32) ->
 fn edge_function(a: &Vec3, b: &Vec3, c: &Vec3) -> f32 {
     (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)
 }
+
