@@ -3,6 +3,7 @@ use minifb::{Key, Window, WindowOptions};
 use std::f32::consts::PI;
 use crate::color::Color;
 use crate::fragment::Fragment;
+use fastnoise_lite::{FastNoiseLite, NoiseType, FractalType};
 
 mod framebuffer;
 mod triangle;
@@ -18,7 +19,7 @@ use vertex::Vertex;
 use obj::Obj;
 use camera::Camera;
 use triangle::triangle;
-use shaders::{vertex_shader, fragment_shader, time_based_color_cycling_shader, moving_horizontal_stripes_shader,
+use shaders::{vertex_shader,sun_shader, fragment_shader, time_based_color_cycling_shader, moving_horizontal_stripes_shader,
               moving_polka_dot_shader, disco_ball_shader};
 
 pub struct Uniforms {
@@ -27,8 +28,30 @@ pub struct Uniforms {
     projection_matrix: Mat4,
     viewport_matrix: Mat4,
     time: u32,
+    noise: FastNoiseLite
+}
+// Noises ---------------------------------------------------------------------------------------------------------
+fn create_noise() -> FastNoiseLite {
+    //create_cloud_noise() 
+    // create_cell_noise()
+    // create_ground_noise()
+    create_sun_noise()
 }
 
+fn create_sun_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(42);
+    
+    // Use FBm for multi-layered noise, giving a "turbulent" feel
+    noise.set_noise_type(Some(NoiseType::Perlin));  // Perlin noise for smooth, natural texture
+    noise.set_fractal_type(Some(FractalType::FBm)); // FBm for layered detail
+    noise.set_fractal_octaves(Some(6));             // High octaves for rich detail
+    noise.set_fractal_lacunarity(Some(2.0));        // Higher lacunarity = more contrast between layers
+    noise.set_fractal_gain(Some(0.5));              // Higher gain = more influence of smaller details
+    noise.set_frequency(Some(0.002));                // Low frequency = large features
+    
+    noise
+}
+// View ------------------------------------------------------------------------------------------------------------
 fn create_model_matrix(translation: Vec3, scale: f32, rotation: Vec3, aspect_ratio: f32) -> Mat4 {
     let (sin_x, cos_x) = rotation.x.sin_cos();
     let (sin_y, cos_y) = rotation.y.sin_cos();
@@ -57,9 +80,9 @@ fn create_model_matrix(translation: Vec3, scale: f32, rotation: Vec3, aspect_rat
 
     let rotation_matrix = rotation_matrix_z * rotation_matrix_y * rotation_matrix_x;
 
-    // Ajuste de escala en el eje X según el aspect_ratio para corregir el estiramiento
+    // Aplicar un escalado uniforme para evitar distorsión en el eje X
     let transform_matrix = Mat4::new(
-        scale / aspect_ratio, 0.0,   0.0,   translation.x,
+        scale, 0.0,   0.0,   translation.x,
         0.0,   scale, 0.0,   translation.y,
         0.0,   0.0,   scale, translation.z,
         0.0,   0.0,   0.0,   1.0,
@@ -73,7 +96,7 @@ fn create_view_matrix(eye: Vec3, center: Vec3, up: Vec3) -> Mat4 {
 }
 
 fn create_perspective_matrix(window_width: f32, window_height: f32) -> Mat4 {
-    let fov = 45.0 * PI / 180.0;
+    let fov = 70.0 * PI / 180.0; // Aumenta el FOV para visualizar mejor el objeto
     let aspect_ratio = window_width / window_height;
     let near = 0.1;
     let far = 1000.0;
@@ -123,7 +146,7 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
         }
     }
 }
-
+// Main -------------------------------------------------------------------------------------------------------------------------------------
 fn main() {
     let window_width = 800;
     let window_height = 600;
@@ -146,10 +169,10 @@ fn main() {
 
     let translation = Vec3::new(0.0, 0.0, 0.0);
     let rotation = Vec3::new(0.0, 0.0, 0.0);
-    let scale = 1.0f32;
+    let scale = 2.0f32;
 
     let mut camera = Camera::new(
-        Vec3::new(0.0, 0.0, 5.0),
+        Vec3::new(0.0, 0.0, 3.0), // Cámara más cercana
         Vec3::new(0.0, 0.0, 0.0),
         Vec3::new(0.0, 1.0, 0.0)
     );
@@ -158,7 +181,6 @@ fn main() {
     let vertex_arrays = obj.get_vertex_array(); 
     let mut time = 0;
     let mut current_planet = 1;
-
     while window.is_open() {
         if window.is_key_down(Key::Escape) {
             break;
@@ -180,7 +202,12 @@ fn main() {
         handle_input(&window, &mut camera);
 
         framebuffer.clear();
-
+        // Seleccionar el ruido correcto en función del planeta actual
+        let noise = match current_planet {
+            1 => create_sun_noise(),
+            3 => create_sun_noise(),
+            _ => FastNoiseLite::with_seed(0),
+        };
         let aspect_ratio = window_width as f32 / window_height as f32;
         let model_matrix = create_model_matrix(translation, scale, rotation, aspect_ratio);
         let view_matrix = create_view_matrix(camera.eye, camera.center, camera.up);
@@ -192,10 +219,11 @@ fn main() {
             projection_matrix, 
             viewport_matrix, 
             time, 
+            noise
         };
 
         let planet_shader = match current_planet {
-            1 => time_based_color_cycling_shader,
+            1 => sun_shader,
             2 => moving_horizontal_stripes_shader,
             3 => moving_polka_dot_shader,
             4 => disco_ball_shader,

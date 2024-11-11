@@ -4,6 +4,9 @@ use crate::Uniforms;
 use crate::fragment::Fragment;
 use crate::color::Color;
 use std::f32::consts::PI;
+use rand::Rng;
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 
 pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
     // Transformar la posición del vértice
@@ -45,9 +48,49 @@ pub fn vertex_shader(vertex: &Vertex, uniforms: &Uniforms) -> Vertex {
 
 pub fn fragment_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
     // Shader base (puede ser modificado según el planeta actual)
-    time_based_color_cycling_shader(fragment, uniforms)
+    //time_based_color_cycling_shader(fragment, uniforms)
+    sun_shader(fragment, uniforms)
 }
 
+pub fn sun_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+  // Base colors for the sun effect
+  let bright_color = Color::new(255, 240, 0); // Bright orange (lava-like)
+  let dark_color = Color::new(130, 20, 0);   // Darker red-orange
+
+  // Get fragment position
+  let position = Vec3::new(
+    fragment.vertex_position.x,
+    fragment.vertex_position.y,
+    fragment.depth
+  );
+
+  // Base frequency and amplitude for the pulsating effect
+  let base_frequency = 0.2;
+  let pulsate_amplitude = 0.5;
+  let t = uniforms.time as f32 * 0.15;
+
+  // Pulsate on the z-axis to change spot size
+  let pulsate = (t * base_frequency).sin() * pulsate_amplitude;
+
+  // Apply noise to coordinates with subtle pulsating on z-axis
+  let zoom = 1000.0; // Constant zoom factor
+  let noise_value1 = uniforms.noise.get_noise_3d(
+    position.x * zoom,
+    position.y * zoom,
+    (position.z + pulsate) * zoom
+  );
+  let noise_value2 = uniforms.noise.get_noise_3d(
+    (position.x + 1000.0) * zoom,
+    (position.y + 1000.0) * zoom,
+    (position.z + 1000.0 + pulsate) * zoom
+  );
+  let noise_value = (noise_value1 + noise_value2) * 0.5;  // Averaging noise for smoother transitions
+
+  // Use lerp for color blending based on noise value
+  let color = dark_color.lerp(&bright_color, noise_value);
+
+  color * fragment.intensity
+}
 pub fn time_based_color_cycling_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
     // Define una lista de colores para cambiar
     let colors = [
