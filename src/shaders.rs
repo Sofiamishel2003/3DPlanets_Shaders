@@ -224,16 +224,19 @@ pub fn mars_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
 
 
 pub fn earth_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
-    let time = 1000u32; // Usamos el tiempo estático como en el ejemplo (ajustable según sea necesario)
+    let time = uniforms.time as f32; // Usamos el tiempo dinámico que viene de los uniforms
 
     // Variables para las coordenadas 2D (posición) del fragmento
     let x = fragment.vertex_position.x;
     let y = fragment.vertex_position.y;
-    let t = time as f32 * 0.5;
+    
+    // Animación de nubes basada en el tiempo
+    let moving_x = x + time * 0.2;  // Velocidad de movimiento en X
+    let moving_y = y + time * 0.1;  // Velocidad de movimiento en Y
 
     // Valores de ruido para la textura de la superficie y para las nubes
     let base_noise_value = uniforms.noise.get_noise_2d(x, y);
-    let cloud_noise_value = uniforms.cloud_noise.get_noise_2d(x * 100.0 + t, y * 100.0 + t);
+    let cloud_noise_value = uniforms.cloud_noise.get_noise_2d(moving_x * 100.0, moving_y * 100.0); // Desplazamiento de nubes
 
     // Colores base para el agua, tierra y nubes
     let water_color_1 = Color::from_float(0.0, 0.1, 0.6); // Azul oscuro
@@ -264,7 +267,8 @@ pub fn earth_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
 
     // Umbral para las nubes
     let cloud_threshold = 0.1;
-    let cloud_opacity = 0.3 + 0.2 * ((time as f32 / 1000.0) * 0.3).sin().abs(); 
+    
+    let cloud_opacity = 0.8 + 0.2 * ((time / 1000.0) * 0.5).sin().abs(); // Opacidad alta
 
     // Comprobar si debemos dibujar nubes en este fragmento
     if cloud_noise_value > cloud_threshold {
@@ -276,7 +280,6 @@ pub fn earth_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
         return lit_color;
     }
 }
-
 
 
 pub fn jupiter_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
