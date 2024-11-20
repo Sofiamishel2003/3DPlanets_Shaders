@@ -74,12 +74,15 @@ fn create_cloud_noise() -> FastNoiseLite {
 }
 fn create_mars_noise() -> FastNoiseLite {
     let mut noise = FastNoiseLite::with_seed(42);
-    noise.set_noise_type(Some(NoiseType::Perlin));   // Smooth surface
-    noise.set_fractal_type(Some(FractalType::FBm));  // Layered texture
-    noise.set_fractal_octaves(Some(5));              // Moderate detail
-    noise.set_fractal_lacunarity(Some(2.5));         // Enhance contrast
-    noise.set_fractal_gain(Some(0.4));               // Influence of smaller details
-    noise.set_frequency(Some(0.005));               // Broad features for large terrain
+    
+    // Usamos Perlin para obtener una textura suave para Marte
+    noise.set_noise_type(Some(NoiseType::Perlin)); // Ruido de Perlin para suavidad
+    noise.set_fractal_type(Some(FractalType::FBm)); // Fractal FBm para generar texturas más naturales
+    noise.set_fractal_octaves(Some(5));             // Establecemos el número de octavas para mayor detalle
+    noise.set_fractal_lacunarity(Some(2.0));        // Lacunaridad para mayor contraste entre capas
+    noise.set_fractal_gain(Some(0.5));              // Ajusta la ganancia para dar más variación a las capas más finas
+    noise.set_frequency(Some(0.01));                // Baja frecuencia para características grandes de la superficie de Marte
+    
     noise
 }
 fn create_jupiter_noise() -> FastNoiseLite {
@@ -236,7 +239,7 @@ fn main() {
 
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
     let mut window = Window::new(
-        "Rust Graphics - Renderer Example",
+        "Rust Graphics - Planets Shaders",
         window_width,
         window_height,
         WindowOptions::default(),

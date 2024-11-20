@@ -183,44 +183,77 @@ pub fn disco_ball_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
     let tile_color = base_color.lerp(&light_color, tile_pattern * light_intensity);
     tile_color.lerp(&light_color, light_factor * 0.7) * fragment.intensity
 }
-pub fn mars_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
-    let noise_value = uniforms.noise.get_noise_3d(
+pub fn mars_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    // Colores base para la superficie de Marte
+    let bright_color = Color::new(150, 70, 30);   // Color brillante, como rojo-anaranjado
+    let mid_color = Color::new(160, 80, 30);      // Color medio, como marrón
+    let dark_color = Color::new(100, 40, 20);     // Color oscuro para áreas sombreadas y cráteres
+
+    // Obtenemos la posición del fragmento
+    let position = Vec3::new(
         fragment.vertex_position.x,
         fragment.vertex_position.y,
-        fragment.vertex_position.z,
+        fragment.depth,
     );
 
-    let dark_red = Color::from_float(0.4, 0.1, 0.1);
-    let terracotta = Color::from_float(0.6, 0.3, 0.1);
-    let bright_orange = Color::from_float(0.8, 0.4, 0.1);
+    // Factor de zoom para mayor detalle en la textura
+    let zoom = 1200.0;
 
-    let lerp_factor = noise_value.clamp(0.0, 1.0);
-    let base_color = if lerp_factor < 0.5 {
-        dark_red.lerp(&terracotta, lerp_factor * 2.0)
+    // Generamos ruido para la textura de la superficie de Marte
+    let noise_value1 = uniforms.noise.get_noise_3d(position.x * zoom, position.y * zoom, position.z * zoom);
+    let noise_value2 = uniforms.noise.get_noise_3d((position.x + 400.0) * zoom, (position.y + 400.0) * zoom, (position.z + 400.0) * zoom);
+    let noise_value = (noise_value1 + noise_value2) * 0.5;
+
+    // Añadimos ruido para los cráteres en la superficie
+    let crater_frequency = 3.0;  // Aumentamos la frecuencia para más cráteres pequeños
+    let crater_amplitude = 0.6;  // Aumentamos la amplitud para hacerlos más evidentes
+    let crater_value = (position.x * crater_frequency).sin() * (position.y * crater_frequency).cos() * crater_amplitude;
+
+    // Combinamos el ruido de la superficie y el ruido de los cráteres
+    let mut combined_value = (noise_value + crater_value).clamp(0.0, 1.0);
+
+    // Añadimos un ruido fino para más detalles de la superficie
+    let fine_noise = uniforms.noise.get_noise_3d(position.x * 2500.0, position.y * 2500.0, position.z * 2500.0) * 0.5;
+    combined_value = (combined_value + fine_noise).clamp(0.0, 1.0);
+
+    // Agregamos un ruido para fracturas o detalles más finos
+    let fracture_noise = uniforms.noise.get_noise_3d(position.x * 3000.0, position.y * 3000.0, position.z * 3000.0) * 0.3;
+    combined_value = (combined_value + fracture_noise).clamp(0.0, 1.0);
+
+    // Determinamos el color de la superficie según el valor combinado
+    let base_color = if combined_value > 0.5 {
+        mid_color.lerp(&bright_color, (combined_value - 0.5) * 1.5) // Mezclamos con el color brillante si el valor es alto
     } else {
-        terracotta.lerp(&bright_orange, (lerp_factor - 0.5) * 2.0)
+        dark_color.lerp(&mid_color, combined_value * 2.0) // Mezclamos con el color oscuro si el valor es bajo
     };
 
-    let light_pos = Vec3::new(0.0, 8.0, 9.0);
-    let light_dir = (light_pos - fragment.vertex_position).normalize();
-    let normal = fragment.normal.normalize();
-    let diffuse_intensity = normal.dot(&light_dir).max(0.0);
-    if diffuse_intensity.is_nan() || diffuse_intensity.is_infinite() {
-        panic!("Diffuse calculation resulted in NaN or infinity!");
-    }
+    // Iluminación difusa (suavizada) para simular la luz sobre la superficie
+    let light_factor = (position.y * 0.5 + uniforms.time as f32 * 0.0015).sin() * 0.1 + 1.0;
+    let directional_light = (position.x * 0.3 + uniforms.time as f32 * 0.002).cos() * 0.05 + 1.0;
+    let final_light_factor = light_factor * directional_light;
 
-    let lit_color = base_color * diffuse_intensity;
-    let ambient_intensity = 0.15;
-    let ambient_color = base_color * ambient_intensity;
+    // Aplicamos la luz sobre el color base
+    let mut final_color = base_color * final_light_factor;
 
-    let final_color = ambient_color + lit_color;
-    (final_color, 0)
+    // Pulsación en la superficie para dar dinamismo (como la variación de la atmósfera)
+    let pulsate_frequency = 0.05;
+    let pulsate_amplitude = 0.1;
+    let pulsate = (uniforms.time as f32 * pulsate_frequency + position.x * 0.02 + position.y * 0.02).sin() * pulsate_amplitude;
+    final_color = final_color * (1.0 + pulsate);
+
+    // Aplicamos una textura de sombra suave con un ruido adicional
+    let shadow_texture_noise = uniforms.noise.get_noise_3d(position.x * 3500.0, position.y * 3500.0, position.z * 3500.0) * 0.4;
+    final_color = final_color * (1.0 - shadow_texture_noise);
+
+    // Devolvemos el color final multiplicado por la intensidad del fragmento
+    final_color * fragment.intensity
 }
+
 
 pub fn mars_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
-    let (color, _extra) = mars_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
-    color
+    mars_shader(fragment, uniforms) // Simplemente devuelve el Color directamente
 }
+
 
 
 pub fn earth_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
