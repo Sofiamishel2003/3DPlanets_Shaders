@@ -93,15 +93,16 @@ fn create_jupiter_noise() -> FastNoiseLite {
     noise
 }
 fn create_mercury_noise() -> FastNoiseLite {
-    let mut noise = FastNoiseLite::with_seed(42);
-    noise.set_noise_type(Some(NoiseType::Cellular)); // Cracked, rocky appearance
-    noise.set_fractal_type(Some(FractalType::FBm));  // Add depth to cracks
-    noise.set_fractal_octaves(Some(3));              // Lower detail
-    noise.set_fractal_lacunarity(Some(2.0));         // Moderate contrast
-    noise.set_fractal_gain(Some(0.6));               // Enhance smaller features
-    noise.set_frequency(Some(0.05));                // Small-scale cracks
+    let mut noise = FastNoiseLite::with_seed(42); // Usamos un semilla específica para Mercurio
+    noise.set_noise_type(Some(NoiseType::Perlin));   // Ruido de Perlin para superficie
+    noise.set_fractal_type(Some(FractalType::FBm));  // Textura fractal para detalles
+    noise.set_fractal_octaves(Some(5));              // Detalles más finos
+    noise.set_fractal_lacunarity(Some(2.5));         // Contraste en las capas de ruido
+    noise.set_fractal_gain(Some(0.5));               // Ajuste de la influencia del ruido
+    noise.set_frequency(Some(0.005));                // Baja frecuencia para grandes características
     noise
 }
+
 
 fn create_uranus_noise() -> FastNoiseLite {
     let mut noise = FastNoiseLite::with_seed(42);
@@ -119,6 +120,16 @@ fn create_venus_noise() -> FastNoiseLite {
     noise.set_fractal_lacunarity(Some(2.2));        // Emphasize cloud patterns
     noise.set_fractal_gain(Some(0.45));             // Balanced detail
     noise.set_frequency(Some(0.005));              // Adjust frequency for smooth cloud features
+    noise
+}
+fn create_moon_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(4321);
+    noise.set_noise_type(Some(NoiseType::OpenSimplex2));
+    noise.set_fractal_type(Some(FractalType::PingPong));
+    noise.set_fractal_octaves(Some(2));
+    noise.set_fractal_lacunarity(Some(2.0));
+    noise.set_fractal_gain(Some(0.5));
+    noise.set_frequency(Some(3.0));  
     noise
 }
 // View ------------------------------------------------------------------------------------------------------------
