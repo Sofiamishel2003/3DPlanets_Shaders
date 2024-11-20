@@ -67,7 +67,7 @@ pub fn sun_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
   // Base frequency and amplitude for the pulsating effect
   let base_frequency = 0.2;
   let pulsate_amplitude = 0.5;
-  let t = uniforms.time as f32 * 0.15;
+  let t = uniforms.time as f32 * 0.30;
 
   // Pulsate on the z-axis to change spot size
   let pulsate = (t * base_frequency).sin() * pulsate_amplitude;
