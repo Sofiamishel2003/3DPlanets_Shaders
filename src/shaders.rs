@@ -183,3 +183,253 @@ pub fn disco_ball_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
     let tile_color = base_color.lerp(&light_color, tile_pattern * light_intensity);
     tile_color.lerp(&light_color, light_factor * 0.7) * fragment.intensity
 }
+pub fn mars_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
+    let noise_value = uniforms.noise.get_noise_3d(
+        fragment.vertex_position.x,
+        fragment.vertex_position.y,
+        fragment.vertex_position.z,
+    );
+
+    let dark_red = Color::from_float(0.4, 0.1, 0.1);
+    let terracotta = Color::from_float(0.6, 0.3, 0.1);
+    let bright_orange = Color::from_float(0.8, 0.4, 0.1);
+
+    let lerp_factor = noise_value.clamp(0.0, 1.0);
+    let base_color = if lerp_factor < 0.5 {
+        dark_red.lerp(&terracotta, lerp_factor * 2.0)
+    } else {
+        terracotta.lerp(&bright_orange, (lerp_factor - 0.5) * 2.0)
+    };
+
+    let light_pos = Vec3::new(0.0, 8.0, 9.0);
+    let light_dir = (light_pos - fragment.vertex_position).normalize();
+    let normal = fragment.normal.normalize();
+    let diffuse_intensity = normal.dot(&light_dir).max(0.0);
+    if diffuse_intensity.is_nan() || diffuse_intensity.is_infinite() {
+        panic!("Diffuse calculation resulted in NaN or infinity!");
+    }
+
+    let lit_color = base_color * diffuse_intensity;
+    let ambient_intensity = 0.15;
+    let ambient_color = base_color * ambient_intensity;
+
+    let final_color = ambient_color + lit_color;
+    (final_color, 0)
+}
+
+pub fn mars_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let (color, _extra) = mars_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
+    color
+}
+
+
+pub fn earth_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    // Tiempo ajustado para variación en las nubes
+    let time = uniforms.time as f32 * 0.1; // Ajuste del tiempo para animación de nubes
+
+    // Parámetros para mover nuestras coordenadas en el mapa de ruido
+    let zoom = 100.0;  
+    let ox = 100.0; // Desplazamiento en el mapa de ruido
+    let oy = 100.0;
+    let x = fragment.vertex_position.x;
+    let y = fragment.vertex_position.y;
+
+    // Ruido para determinar si el fragmento es tierra o agua
+    let base_noise_value = uniforms.noise.get_noise_2d(x, y);
+    let cloud_noise_value = uniforms.cloud_noise.get_noise_2d(x * zoom + ox + time, y * zoom + oy);
+
+    // Colores base para el agua y la tierra
+    let water_color_1 = Color::from_float(0.0, 0.1, 0.6); // Azul oscuro para el agua
+    let water_color_2 = Color::from_float(0.0, 0.3, 0.7); // Azul más claro
+    let land_color_1 = Color::from_float(0.1, 0.5, 0.0); // Verde oscuro para la tierra
+    let land_color_2 = Color::from_float(0.2, 0.8, 0.2); // Verde claro para la tierra
+    let cloud_color = Color::from_float(0.9, 0.9, 0.9); // Color blanco para las nubes
+
+    // Umbral para decidir si es agua o tierra
+    let land_threshold = 0.3;
+
+    // Definir el color base (agua o tierra)
+    let base_color = if base_noise_value > land_threshold {
+        // Es tierra
+        land_color_1.lerp(&land_color_2, (base_noise_value - land_threshold) / (1.0 - land_threshold))
+    } else {
+        // Es agua
+        water_color_1.lerp(&water_color_2, base_noise_value / land_threshold)
+    };
+
+    // Iluminación difusa: calcular la dirección de la luz
+    let light_position = Vec3::new(1.0, 1.0, 3.0);  // Posición del sol
+    let light_dir = (light_position - fragment.vertex_position).normalize(); // Dirección de la luz
+    let normal = fragment.normal.normalize();  // Normal del fragmento
+    let diffuse = normal.dot(&light_dir).max(0.0);  // Intensidad de la luz difusa
+
+    let lit_color = base_color * (0.1 + 0.9 * diffuse);  // Mezcla la iluminación difusa
+
+    // Umbral para la aparición de nubes
+    let cloud_threshold = 0.1;
+    let cloud_opacity = 0.3 + 0.2 * ((time / 1000.0) * 0.3).sin().abs();  // Oscilación para las nubes
+
+    // Si el fragmento supera el umbral de las nubes, se mezcla con el color de las nubes
+    if cloud_noise_value > cloud_threshold {
+        let cloud_intensity = ((cloud_noise_value - cloud_threshold) / (1.0 - cloud_threshold)).clamp(0.0, 1.0);
+        return lit_color.blend_add(&(cloud_color * (cloud_intensity * cloud_opacity)));
+    } else {
+        return lit_color;  // Si no, solo el color base
+    }
+}
+
+pub fn earth_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    earth_shader(fragment, uniforms)
+}
+
+
+
+pub fn jupiter_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
+    let latitude = fragment.vertex_position.y;
+    let band_frequency = 10.0;
+
+    let band_noise = uniforms.noise.get_noise_2d(
+        fragment.vertex_position.x * 2.0,
+        fragment.vertex_position.y * 2.0,
+    );
+    let band_noise_intensity = 0.2;
+    let distorted_latitude = latitude + band_noise * band_noise_intensity;
+    let band_pattern = (distorted_latitude * band_frequency).sin();
+
+    let band_colors = [
+        Color::from_hex(0xc6bcad),
+        Color::from_hex(0x955d36),
+        Color::from_hex(0xc7c7cf),
+    ];
+
+    let normalized_band = (band_pattern + 1.0) / 2.0 * (band_colors.len() as f32 - 1.0);
+    let index = normalized_band.floor() as usize;
+    let t = normalized_band.fract();
+    let color1 = band_colors[index % band_colors.len()];
+    let color2 = band_colors[(index + 1) % band_colors.len()];
+    let base_color = color1.lerp(&color2, t);
+
+    let turbulence_intensity = 0.3;
+    let turbulence_color = base_color.lerp(&Color::from_hex(0xffffff), turbulence_intensity);
+
+    let light_position = Vec3::new(0.0, 8.0, 9.0);
+    let light_direction = (light_position - fragment.vertex_position).normalize();
+    let normal = fragment.normal.normalize();
+    let diffuse = normal.dot(&light_direction).max(0.0);
+    if diffuse.is_nan() || diffuse.is_infinite() {
+        panic!("Diffuse calculation resulted in NaN or infinity!");
+    }
+
+    let ambient_intensity = 0.15;
+    let ambient_color = turbulence_color * ambient_intensity;
+    let lit_color = turbulence_color * diffuse;
+
+    (ambient_color + lit_color, 0)
+}
+
+pub fn jupiter_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let (color, _extra) = jupiter_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
+    color
+}
+
+
+pub fn mercury_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
+    let noise_value = uniforms.noise.get_noise_2d(fragment.vertex_position.x, fragment.vertex_position.y);
+
+    let gray_light = Color::from_float(0.7, 0.7, 0.7);
+    let gray_dark = Color::from_float(0.4, 0.4, 0.4);
+    let brown = Color::from_float(0.5, 0.4, 0.3);
+
+    let lerp_factor = noise_value.clamp(0.0, 1.0);
+    let base_color = gray_light.lerp(&gray_dark, lerp_factor).lerp(&brown, lerp_factor * 0.5);
+
+    let light_pos = Vec3::new(0.0, 8.0, 9.0);
+    let light_dir = (light_pos - fragment.vertex_position).normalize();
+    let normal = fragment.normal.normalize();
+    let diffuse_intensity = normal.dot(&light_dir).max(0.0);
+    if diffuse_intensity.is_nan() || diffuse_intensity.is_infinite() {
+        panic!("Diffuse calculation resulted in NaN or infinity!");
+    }
+
+    let lit_color = base_color * diffuse_intensity;
+    let ambient_intensity = 0.2;
+    let ambient_color = base_color * ambient_intensity;
+
+    (ambient_color + lit_color, 0)
+}
+
+pub fn mercury_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let (color, _extra) = mercury_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
+    color
+}
+
+
+pub fn uranus_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
+    let x = fragment.vertex_position.x;
+    let y = fragment.vertex_position.y;
+    let z = fragment.vertex_position.z;
+    let t = time as f32 * 0.001; // Scale time for cloud motion
+
+    // Generate smooth noise for atmospheric features
+    let noise_value = uniforms.noise.get_noise_3d(x, y + t, z);
+
+    // Base Uranus color
+    let base_color = Color::from_float(0.2, 0.5, 0.9); // Light blue for Uranus atmosphere
+
+    // Intensity adjustment for smooth color variation
+    let intensity = (noise_value * 0.5 + 0.5).clamp(0.0, 1.0);
+    let varied_color = base_color * intensity;
+
+    // Directional lighting for highlights
+    let light_dir = Vec3::new(1.0, 1.0, 1.0).normalize();
+    let normal = fragment.normal.normalize();
+    let diffuse_intensity = normal.dot(&light_dir).max(0.0);
+    if diffuse_intensity.is_nan() || diffuse_intensity.is_infinite() {
+        panic!("Diffuse calculation resulted in NaN or infinity!");
+    }
+    let ambient_intensity = 0.3; // Base ambient light
+    let lit_color = varied_color * (ambient_intensity + (1.0 - ambient_intensity) * diffuse_intensity);
+
+    (lit_color, 0)
+}
+
+pub fn uranus_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let (color, _extra) = uranus_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
+    color
+}
+
+pub fn venus_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
+    // Base Venus colors
+    let yellow_haze = Color::from_float(0.9, 0.8, 0.5); // Hazy yellow
+    let orange_haze = Color::from_float(0.8, 0.6, 0.3); // Deep orange tones
+
+    // Generate cloud patterns
+    let cloud_noise_value = uniforms.noise.get_noise_3d(
+        fragment.vertex_position.x,
+        fragment.vertex_position.y,
+        fragment.vertex_position.z,
+    );
+
+    // Cloud opacity adjustment based on noise
+    let cloud_opacity = (cloud_noise_value + 1.0) * 0.5; // Normalize to [0, 1]
+
+    // Add directional lighting
+    let light_pos = Vec3::new(0.0, 8.0, 9.0);
+    let light_dir = (light_pos - fragment.vertex_position).normalize();
+    let normal = fragment.normal.normalize();
+    let diffuse_intensity = normal.dot(&light_dir).max(0.0);
+    if diffuse_intensity.is_nan() || diffuse_intensity.is_infinite() {
+        panic!("Diffuse calculation resulted in NaN or infinity!");
+    }
+
+    // Combine base colors with cloud opacity and lighting
+    let base_color = yellow_haze.lerp(&orange_haze, cloud_opacity);
+    let lit_color = base_color * (0.3 + 0.7 * diffuse_intensity);
+
+    (lit_color, 0)
+}
+
+pub fn venus_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let (color, _extra) = venus_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
+    color
+}

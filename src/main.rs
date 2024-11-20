@@ -19,8 +19,8 @@ use vertex::Vertex;
 use obj::Obj;
 use camera::Camera;
 use triangle::triangle;
-use shaders::{vertex_shader,sun_shader, fragment_shader, time_based_color_cycling_shader, moving_horizontal_stripes_shader,
-              moving_polka_dot_shader, disco_ball_shader};
+use shaders::{vertex_shader,sun_shader, fragment_shader, time_based_color_cycling_shader, mars_shader_wrapper, earth_shader_wrapper
+    ,jupiter_shader_wrapper,mercury_shader_wrapper, uranus_shader_wrapper,venus_shader_wrapper, disco_ball_shader};
 
 pub struct Uniforms {
     model_matrix: Mat4,
@@ -28,7 +28,8 @@ pub struct Uniforms {
     projection_matrix: Mat4,
     viewport_matrix: Mat4,
     time: u32,
-    noise: FastNoiseLite
+    noise: FastNoiseLite,
+    cloud_noise: FastNoiseLite, 
 }
 // Noises ---------------------------------------------------------------------------------------------------------
 fn create_noise() -> FastNoiseLite {
@@ -49,6 +50,75 @@ fn create_sun_noise() -> FastNoiseLite {
     noise.set_fractal_gain(Some(0.5));              // Higher gain = more influence of smaller details
     noise.set_frequency(Some(0.002));                // Low frequency = large features
     
+    noise
+}
+fn create_earth_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(42);
+    noise.set_noise_type(Some(NoiseType::Perlin));  // Replace Simplex with Perlin
+    noise.set_fractal_type(Some(FractalType::FBm)); 
+    noise.set_fractal_octaves(Some(4));              
+    noise.set_fractal_lacunarity(Some(2.2));         
+    noise.set_fractal_gain(Some(0.5));               
+    noise.set_frequency(Some(0.008));               
+    noise
+}
+fn create_cloud_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(1234); // Use a unique seed for clouds
+    noise.set_noise_type(Some(NoiseType::Perlin));  // Smooth noise for clouds
+    noise.set_fractal_type(Some(FractalType::FBm)); // Fractal noise for depth
+    noise.set_fractal_octaves(Some(6));             // Higher octaves for more detail
+    noise.set_fractal_lacunarity(Some(2.0));        // Higher lacunarity for contrast
+    noise.set_fractal_gain(Some(0.5));              // Balance smaller and larger features
+    noise.set_frequency(Some(0.01));               // Low frequency for large cloud structures
+    noise
+}
+fn create_mars_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(42);
+    noise.set_noise_type(Some(NoiseType::Perlin));   // Smooth surface
+    noise.set_fractal_type(Some(FractalType::FBm));  // Layered texture
+    noise.set_fractal_octaves(Some(5));              // Moderate detail
+    noise.set_fractal_lacunarity(Some(2.5));         // Enhance contrast
+    noise.set_fractal_gain(Some(0.4));               // Influence of smaller details
+    noise.set_frequency(Some(0.005));               // Broad features for large terrain
+    noise
+}
+fn create_jupiter_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(42);
+    noise.set_noise_type(Some(NoiseType::Perlin));  // Perlin for banded structure
+    noise.set_fractal_type(Some(FractalType::FBm)); // Add depth to bands
+    noise.set_fractal_octaves(Some(6));             // Detailed turbulence
+    noise.set_fractal_lacunarity(Some(1.8));        // Emphasize band transitions
+    noise.set_fractal_gain(Some(0.45));             // Enhance smaller turbulence
+    noise.set_frequency(Some(0.02));               // Scale of gas bands
+    noise
+}
+fn create_mercury_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(42);
+    noise.set_noise_type(Some(NoiseType::Cellular)); // Cracked, rocky appearance
+    noise.set_fractal_type(Some(FractalType::FBm));  // Add depth to cracks
+    noise.set_fractal_octaves(Some(3));              // Lower detail
+    noise.set_fractal_lacunarity(Some(2.0));         // Moderate contrast
+    noise.set_fractal_gain(Some(0.6));               // Enhance smaller features
+    noise.set_frequency(Some(0.05));                // Small-scale cracks
+    noise
+}
+
+fn create_uranus_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(42);
+    noise.set_noise_type(Some(NoiseType::Perlin));  // Smooth noise for Uranus
+    noise.set_fractal_type(Some(FractalType::None)); 
+    noise.set_frequency(Some(0.01));               
+    noise
+}
+
+fn create_venus_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(9876); // Unique seed for Venus
+    noise.set_noise_type(Some(NoiseType::Perlin));  // Smooth noise for clouds
+    noise.set_fractal_type(Some(FractalType::FBm)); // Fractal noise for cloud depth
+    noise.set_fractal_octaves(Some(5));             // Moderate detail
+    noise.set_fractal_lacunarity(Some(2.2));        // Emphasize cloud patterns
+    noise.set_fractal_gain(Some(0.45));             // Balanced detail
+    noise.set_frequency(Some(0.005));              // Adjust frequency for smooth cloud features
     noise
 }
 // View ------------------------------------------------------------------------------------------------------------
@@ -205,7 +275,12 @@ fn main() {
         // Seleccionar el ruido correcto en función del planeta actual
         let noise = match current_planet {
             1 => create_sun_noise(),
-            3 => create_sun_noise(),
+            2 => create_mars_noise(),
+            3 => create_earth_noise(),
+            4 => create_jupiter_noise(),
+            5 => create_mercury_noise(),
+            6 => create_uranus_noise(),
+            7 => create_venus_noise(),  // Add Venus
             _ => FastNoiseLite::with_seed(0),
         };
         let aspect_ratio = window_width as f32 / window_height as f32;
@@ -219,14 +294,18 @@ fn main() {
             projection_matrix, 
             viewport_matrix, 
             time, 
-            noise
+            noise,
+            cloud_noise: create_cloud_noise()
         };
 
         let planet_shader = match current_planet {
             1 => sun_shader,
-            2 => moving_horizontal_stripes_shader,
-            3 => moving_polka_dot_shader,
-            4 => disco_ball_shader,
+            2 => mars_shader_wrapper,
+            3 => earth_shader_wrapper,
+            4 => jupiter_shader_wrapper,
+            5 => mercury_shader_wrapper,
+            6 => uranus_shader_wrapper,
+            7 => venus_shader_wrapper,
             _ => time_based_color_cycling_shader,
         };
 
