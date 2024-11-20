@@ -96,7 +96,7 @@ fn create_mercury_noise() -> FastNoiseLite {
     let mut noise = FastNoiseLite::with_seed(42); // Usamos un semilla específica para Mercurio
     noise.set_noise_type(Some(NoiseType::Perlin));   // Ruido de Perlin para superficie
     noise.set_fractal_type(Some(FractalType::FBm));  // Textura fractal para detalles
-    noise.set_fractal_octaves(Some(5));              // Detalles más finos
+    noise.set_fractal_octaves(Some(10));              // Detalles más finos
     noise.set_fractal_lacunarity(Some(2.5));         // Contraste en las capas de ruido
     noise.set_fractal_gain(Some(0.5));               // Ajuste de la influencia del ruido
     noise.set_frequency(Some(0.005));                // Baja frecuencia para grandes características

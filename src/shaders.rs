@@ -430,72 +430,71 @@ pub fn venus_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
 }
 
 pub fn mercury_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
-    // Definimos los colores base para la superficie rocosa
-    let bright_color = Color::new(230, 120, 70);  // Color brillante (rojo anaranjado)
-    let mid_color = Color::new(140, 70, 40);     // Color medio (rojo oscuro)
-    let dark_color = Color::new(30, 10, 5);      // Color oscuro (marrón oscuro)
+    // Colores base para la superficie rocosa con tonos de gris-dorado
+    let bright_color = Color::from_float(0.9, 0.9, 0.9);  // Gris plateado brillante
+    let mid_color = Color::from_float(0.6, 0.55, 0.4);     // Gris dorado medio
+    let dark_color = Color::from_float(0.3, 0.2, 0.1);     // Gris oscuro con toques cálidos
 
     // Obtenemos la posición del fragmento
     let position = Vec3::new(fragment.vertex_position.x, fragment.vertex_position.y, fragment.depth);
 
-    // Factor de zoom para el ruido (para darle más detalle a la textura)
+    // Factor de zoom para mayor detalle en la textura
     let zoom = 1200.0;
 
-    // Obtener ruido para la superficie rocosa
+    // Generar ruido para la superficie
     let noise_value1 = uniforms.noise.get_noise_3d(position.x * zoom, position.y * zoom, position.z * zoom);
     let noise_value2 = uniforms.noise.get_noise_3d((position.x + 400.0) * zoom, (position.y + 400.0) * zoom, (position.z + 400.0) * zoom);
     let noise_value = (noise_value1 + noise_value2) * 0.5;
 
-    // Parámetros para los cráteres en la superficie
-    let crater_frequency = 1.5;
-    let crater_amplitude = 2.0;
-    let crater_value = (position.x * crater_frequency + position.y * crater_frequency).sin()
-        * (position.x * crater_frequency - position.y * crater_frequency).cos()
-        * crater_amplitude;
+    // Parámetros para los cráteres en la superficie (más detalles)
+    let crater_frequency = 3.5;  // Aumentar la frecuencia de cráteres para más detalle
+    let crater_amplitude = 0.5;  // Aumentar la amplitud de los cráteres para que sean más visibles
+    let crater_value = ((position.x * crater_frequency).sin() * (position.y * crater_frequency).cos() * crater_amplitude)
+        .clamp(0.0, 1.0);
 
     // Combinamos el ruido base y el ruido de los cráteres
     let mut combined_value = (noise_value + crater_value).clamp(0.0, 1.0);
 
-    // Aplicamos un ruido fino para más detalle
-    let fine_noise = uniforms.noise.get_noise_3d(position.x * 1600.0, position.y * 1600.0, position.z * 1600.0) * 0.3;
+    // Añadimos un ruido fino para más textura
+    let fine_noise = uniforms.noise.get_noise_3d(position.x * 2500.0, position.y * 2500.0, position.z * 2500.0) * 0.5;
     combined_value = (combined_value + fine_noise).clamp(0.0, 1.0);
 
-    // Agregamos un ruido para las fracturas
-    let fracture_noise = uniforms.noise.get_noise_3d(position.x * 2000.0, position.y * 2000.0, position.z * 2000.0) * 0.15;
+    // Agregamos un ruido para las fracturas y detalles más finos
+    let fracture_noise = uniforms.noise.get_noise_3d(position.x * 3000.0, position.y * 3000.0, position.z * 3000.0) * 0.3;
     combined_value = (combined_value + fracture_noise).clamp(0.0, 1.0);
 
-    // Determinamos el color dependiendo del valor combinado
-    let color = if combined_value > 0.5 {
-        mid_color.lerp(&bright_color, (combined_value - 0.5) * 1.5) // Color brillante si el valor es alto
+    // Determinamos el color base dependiendo del valor combinado
+    let base_color = if combined_value > 0.5 {
+        mid_color.lerp(&bright_color, (combined_value - 0.5) * 2.0) // Color brillante si el valor es alto
     } else {
         dark_color.lerp(&mid_color, combined_value * 2.0) // Color oscuro si el valor es bajo
     };
 
-    // Factores de luz para simular iluminación dinámica
-    let light_factor = (position.y * 0.5 + uniforms.time as f32 * 0.0015).sin() * 0.1 + 1.0;
-    let directional_light = (position.x * 0.3 + uniforms.time as f32 * 0.002).cos() * 0.05 + 1.0;
-    let final_light_factor = light_factor * directional_light;
-    
-    // Aplicamos la luz al color calculado
-    let mut final_color = color * final_light_factor;
+    // Iluminación dinámica (ajustar la dirección para que la parte oscura esté en la parte trasera)
+    let light_position = Vec3::new(0.0, 0.0, 5.0);  // Luz principal (detrás del planeta)
+    let light_direction = (light_position - fragment.vertex_position).normalize(); // Dirección de la luz hacia el planeta
+    let normal = fragment.normal.normalize();  // Normal del fragmento
+    let diffuse_intensity = normal.dot(&light_direction).max(0.0); // Intensidad de la luz difusa
 
-    // Efecto pulsante en la superficie del planeta
-    let pulsate_frequency = 0.06;
-    let pulsate_amplitude = 0.1;
+    // Intensidad ambiental (ajustar para simular más reflexión en las superficies rocosas)
+    let ambient_intensity = 0.3;  
+    let lit_color = base_color * (ambient_intensity + (1.0 - ambient_intensity) * diffuse_intensity);
+
+    // Aplicar textura de sombra suave con ruido
+    let shadow_texture_noise = uniforms.noise.get_noise_3d(
+        position.x * 3500.0,
+        position.y * 3500.0,
+        position.z * 3500.0,
+    ) * 0.4;
+    let final_color = lit_color * (1.0 - shadow_texture_noise);
+
+    // Pulsación en la superficie para dar más dinamismo
+    let pulsate_frequency = 0.05;
+    let pulsate_amplitude = 0.08;
     let pulsate = (uniforms.time as f32 * pulsate_frequency + position.x * 0.02 + position.y * 0.02).sin() * pulsate_amplitude;
-    final_color = final_color * (1.0 + pulsate);
-
-    // Aplicamos un ruido para texturas de sombra
-    let shadow_texture_noise = uniforms.noise.get_noise_3d(position.x * 2500.0, position.y * 2500.0, position.z * 2500.0) * 0.3;
-    final_color = final_color * (1.0 + shadow_texture_noise);
-
-    // Aplicamos un ruido para resaltar detalles de iluminación
-    let highlight_texture_noise = uniforms.noise.get_noise_3d(position.x * 3000.0, position.y * 3000.0, position.z * 3000.0) * 0.25;
-    final_color = final_color * (1.0 + highlight_texture_noise);
-
-    // Añadimos una variación de profundidad con ruido
-    let depth_variation = uniforms.noise.get_noise_3d(position.x * 3500.0, position.y * 3500.0, position.z * 3500.0) * 0.1;
-    final_color = final_color * (1.0 + depth_variation);
+    
+    // Final color modificado por la pulsación
+    let final_color = final_color * (1.0 + pulsate);
 
     // Devolvemos el color final multiplicado por la intensidad del fragmento
     final_color * fragment.intensity
