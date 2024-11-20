@@ -53,13 +53,13 @@ fn create_sun_noise() -> FastNoiseLite {
     noise
 }
 fn create_earth_noise() -> FastNoiseLite {
-    let mut noise = FastNoiseLite::with_seed(42);
-    noise.set_noise_type(Some(NoiseType::Perlin));  // Replace Simplex with Perlin
-    noise.set_fractal_type(Some(FractalType::FBm)); 
-    noise.set_fractal_octaves(Some(4));              
-    noise.set_fractal_lacunarity(Some(2.2));         
-    noise.set_fractal_gain(Some(0.5));               
-    noise.set_frequency(Some(0.008));               
+    let mut noise = FastNoiseLite::with_seed(1337);
+    noise.set_noise_type(Some(NoiseType::OpenSimplex2S));
+    noise.set_fractal_type(Some(FractalType::Ridged));
+    noise.set_fractal_octaves(Some(5)); // Octavas para mayor detalle
+    noise.set_fractal_lacunarity(Some(3.0)); // Lacunaridad para escalado de frecuencia
+    noise.set_fractal_gain(Some(0.5)); // Ganancia para el escalado de amplitud
+    noise.set_frequency(Some(0.5)); 
     noise
 }
 fn create_cloud_noise() -> FastNoiseLite {

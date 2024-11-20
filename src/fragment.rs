@@ -1,3 +1,4 @@
+
 use nalgebra_glm::{Vec3, Vec2};
 use crate::color::Color;
 
@@ -8,6 +9,7 @@ pub struct Fragment {
     pub normal: Vec3,
     pub intensity: f32,
     pub vertex_position: Vec3,
+    pub uv: Option<Vec2>,
 }
 
 impl Fragment {
@@ -18,6 +20,7 @@ impl Fragment {
         normal: Vec3,
         intensity: f32,
         vertex_position: Vec3,
+        uv: Option<Vec2>
     ) -> Self {  
         Fragment {
             position,
@@ -26,6 +29,7 @@ impl Fragment {
             normal,
             intensity,
             vertex_position,
+            uv
         }
     }
 }

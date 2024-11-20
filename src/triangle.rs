@@ -1,6 +1,6 @@
 use nalgebra_glm::{Vec3, dot, Vec2};
 use crate::fragment::Fragment;
-use crate::vertex::{self, Vertex};
+use crate::vertex::Vertex;
 use crate::color::Color;
 
 pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
@@ -49,6 +49,7 @@ pub fn triangle(v1: &Vertex, v2: &Vertex, v3: &Vertex) -> Vec<Fragment> {
             normal,
             intensity,
             vertex_position,
+            None
         ));
       }
     }
@@ -77,4 +78,3 @@ fn barycentric_coordinates(p: &Vec3, a: &Vec3, b: &Vec3, c: &Vec3, area: f32) ->
 fn edge_function(a: &Vec3, b: &Vec3, c: &Vec3) -> f32 {
     (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)
 }
-
