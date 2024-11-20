@@ -183,3 +183,35 @@ pub fn disco_ball_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
     let tile_color = base_color.lerp(&light_color, tile_pattern * light_intensity);
     tile_color.lerp(&light_color, light_factor * 0.7) * fragment.intensity
 }
+
+pub fn mars_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    // Definir los colores base para la superficie de Marte
+    let base_color = Color::new(200, 100, 50); // Rojo-naranja característico de Marte
+    let detail_color = Color::new(130, 50, 20); // Gris oscuro para detalles
+
+    // Posición del fragmento (usado para la variación de ruido)
+    let position = Vec3::new(fragment.vertex_position.x, fragment.vertex_position.y, fragment.depth);
+
+    // Generar ruido para dar variaciones de la superficie
+    let noise_value = uniforms.noise.get_noise_3d(position.x * 0.5, position.y * 0.5, position.z * 0.5);
+
+    // Aplicar una interpolación de color (lerp) según el valor de ruido
+    let surface_color = detail_color.lerp(&base_color, noise_value * 0.5 + 0.5);
+
+    // Devolver el color ajustado con la intensidad del fragmento
+    surface_color * fragment.intensity
+}
+pub fn moon_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let base_color = Color::new(150, 150, 150); // Gris claro para la luna
+    let detail_color = Color::new(80, 80, 80);  // Gris oscuro para detalles
+
+    // Generar ruido para variaciones de la superficie de la luna
+    let position = Vec3::new(fragment.vertex_position.x, fragment.vertex_position.y, fragment.depth);
+    let noise_value = uniforms.noise.get_noise_3d(position.x * 0.1, position.y * 0.1, position.z * 0.1);
+
+    // Aplicar la interpolación de color (lerp) según el valor de ruido
+    let surface_color = detail_color.lerp(&base_color, noise_value * 0.5 + 0.5);
+
+    // Retornar el color ajustado con la intensidad del fragmento
+    surface_color * fragment.intensity
+}
