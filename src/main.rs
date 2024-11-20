@@ -45,10 +45,10 @@ fn create_sun_noise() -> FastNoiseLite {
     // Use FBm for multi-layered noise, giving a "turbulent" feel
     noise.set_noise_type(Some(NoiseType::Perlin));  // Perlin noise for smooth, natural texture
     noise.set_fractal_type(Some(FractalType::FBm)); // FBm for layered detail
-    noise.set_fractal_octaves(Some(6));             // High octaves for rich detail
+    noise.set_fractal_octaves(Some(10));             // High octaves for rich detail
     noise.set_fractal_lacunarity(Some(2.0));        // Higher lacunarity = more contrast between layers
     noise.set_fractal_gain(Some(0.5));              // Higher gain = more influence of smaller details
-    noise.set_frequency(Some(0.002));                // Low frequency = large features
+    noise.set_frequency(Some(0.02));                // Low frequency = large features
     
     noise
 }
