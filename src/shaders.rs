@@ -223,65 +223,71 @@ pub fn mars_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
 }
 
 
-pub fn earth_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
-    // Tiempo ajustado para variación en las nubes
-    let time = uniforms.time as f32 * 0.1; // Ajuste del tiempo para animación de nubes
-
-    // Parámetros para mover nuestras coordenadas en el mapa de ruido
-    let zoom = 100.0;  
-    let ox = 100.0; // Desplazamiento en el mapa de ruido
-    let oy = 100.0;
+pub fn earth_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    // Colores base para diferentes tonalidades de océano y tierra
+    let deep_ocean_color = Color::new(0, 70, 130);     // Azul oscuro para océano profundo
+    let shallow_ocean_color = Color::new(0, 105, 148); // Azul más claro para aguas poco profundas
+    let beach_color = Color::new(237, 201, 175);       // Color de playa entre océano y tierra
+    let lowland_color = Color::new(34, 139, 34);       // Verde oscuro para tierra baja
+    let highland_color = Color::new(85, 170, 85);      // Verde claro para tierras altas
+    let polar_color = Color::new(255, 255, 255);       // Blanco para zonas polares
+  
+    // Coordenadas de mapa para el fragmento
     let x = fragment.vertex_position.x;
     let y = fragment.vertex_position.y;
-
-    // Ruido para determinar si el fragmento es tierra o agua
-    let base_noise_value = uniforms.noise.get_noise_2d(x, y);
-    let cloud_noise_value = uniforms.cloud_noise.get_noise_2d(x * zoom + ox + time, y * zoom + oy);
-
-    // Colores base para el agua y la tierra
-    let water_color_1 = Color::from_float(0.0, 0.1, 0.6); // Azul oscuro para el agua
-    let water_color_2 = Color::from_float(0.0, 0.3, 0.7); // Azul más claro
-    let land_color_1 = Color::from_float(0.1, 0.5, 0.0); // Verde oscuro para la tierra
-    let land_color_2 = Color::from_float(0.2, 0.8, 0.2); // Verde claro para la tierra
-    let cloud_color = Color::from_float(0.9, 0.9, 0.9); // Color blanco para las nubes
-
-    // Umbral para decidir si es agua o tierra
-    let land_threshold = 0.3;
-
-    // Definir el color base (agua o tierra)
-    let base_color = if base_noise_value > land_threshold {
-        // Es tierra
-        land_color_1.lerp(&land_color_2, (base_noise_value - land_threshold) / (1.0 - land_threshold))
+  
+    // Definición detallada de continentes usando ruido fractal
+    let land_factor = (
+        (x * 3.0).sin() * (y * 4.5).cos() * 0.7 +
+        (x * 1.5 + y * 2.0).sin() * 0.3 +
+        (x * 5.5).cos() * (y * 3.5).sin() * 0.2 +
+        ((x * 10.0).sin() * (y * 10.0).cos()).sin() * 0.1 +
+        ((x * 15.0 + y * 1.5).sin() * 0.5 + 0.5) * 0.15 +
+        ((x * 20.0).sin() * (y * 18.0).cos()).cos() * 0.05
+    ) * 0.5 + 0.5;
+  
+    // Selección de color para el océano y la tierra según el `land_factor`
+    let base_color = if y.abs() > 0.8 {
+        polar_color // Zonas polares
+    } else if land_factor < 0.45 {
+        // Océano profundo a aguas poco profundas
+        deep_ocean_color.lerp(&shallow_ocean_color, land_factor / 0.45)
+    } else if land_factor < 0.5 {
+        // Playa
+        shallow_ocean_color.lerp(&beach_color, (land_factor - 0.45) / 0.05)
+    } else if land_factor < 0.8 {
+        // Tierras bajas a altas
+        beach_color.lerp(&lowland_color, (land_factor - 0.5) / 0.3)
     } else {
-        // Es agua
-        water_color_1.lerp(&water_color_2, base_noise_value / land_threshold)
+        // Zonas de alta altitud
+        lowland_color.lerp(&highland_color, (land_factor - 0.8) / 0.2)
     };
-
-    // Iluminación difusa: calcular la dirección de la luz
-    let light_position = Vec3::new(1.0, 1.0, 3.0);  // Posición del sol
-    let light_dir = (light_position - fragment.vertex_position).normalize(); // Dirección de la luz
-    let normal = fragment.normal.normalize();  // Normal del fragmento
-    let diffuse = normal.dot(&light_dir).max(0.0);  // Intensidad de la luz difusa
-
-    let lit_color = base_color * (0.1 + 0.9 * diffuse);  // Mezcla la iluminación difusa
-
-    // Umbral para la aparición de nubes
-    let cloud_threshold = 0.1;
-    let cloud_opacity = 0.3 + 0.2 * ((time / 1000.0) * 0.3).sin().abs();  // Oscilación para las nubes
-
-    // Si el fragmento supera el umbral de las nubes, se mezcla con el color de las nubes
-    if cloud_noise_value > cloud_threshold {
-        let cloud_intensity = ((cloud_noise_value - cloud_threshold) / (1.0 - cloud_threshold)).clamp(0.0, 1.0);
-        return lit_color.blend_add(&(cloud_color * (cloud_intensity * cloud_opacity)));
+  
+    // Cálculo del ruido de las nubes
+    let zoom = 50.0;  // Para mover nuestros valores
+    let oy = 50.0;
+    let t = uniforms.time as f32 * 0.5;
+  
+    let noise_value = uniforms.noise.get_noise_2d(x * zoom  + t, y * zoom + oy);
+  
+    // Umbral de nubes y colores
+    let cloud_threshold = 0.5; // Ajusta este valor para cambiar la densidad de las nubes
+    let cloud_color = Color::new(255, 255, 255); // Blanco para las nubes
+  
+    // Determina si el píxel es parte de una nube o del cielo
+    let noise_color = if noise_value > cloud_threshold {
+      cloud_color
     } else {
-        return lit_color;  // Si no, solo el color base
-    }
-}
-
-pub fn earth_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
-    earth_shader(fragment, uniforms)
-}
-
+      base_color
+    };
+  
+    // Mezcla la base del color de la tierra con el color de las nubes
+    let cloud_effect = noise_color.lerp(&base_color, 0.5); // Mezcla las nubes con el color de la tierra
+  
+    // Ajusta el color final con la intensidad del fragmento
+    cloud_effect * fragment.intensity
+  }
+  
 
 
 pub fn jupiter_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
