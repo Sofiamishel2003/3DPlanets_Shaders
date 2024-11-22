@@ -359,32 +359,48 @@ pub fn jupiter_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color
 
 
 pub fn uranus_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
+    let zoom = 100.0;
+    let ox = 100.0;
+    let oy = 100.0;
     let x = fragment.vertex_position.x;
     let y = fragment.vertex_position.y;
-    let z = fragment.vertex_position.z;
-    let t = time as f32 * 0.001; // Scale time for cloud motion
+    let t = time as f32 * 0.1;
 
-    // Generate smooth noise for atmospheric features
-    let noise_value = uniforms.noise.get_noise_3d(x, y + t, z);
+    let base_noise_value = uniforms.noise.get_noise_2d(x, y);
+    let cloud_noise_value = uniforms.cloud_noise.get_noise_2d(x * zoom + ox + t, y * zoom + oy);
 
-    // Base Uranus color
-    let base_color = Color::from_float(0.2, 0.5, 0.9); // Light blue for Uranus atmosphere
+    let water_color_1 = Color::from_float(0.0, 0.1, 0.6);
+    let water_color_2 = Color::from_float(0.0, 0.3, 0.7);
+    let land_color_1 = Color::from_float(0.1, 0.5, 0.0);
+    let land_color_2 = Color::from_float(0.2, 0.8, 0.2);
+    let cloud_color = Color::from_float(0.9, 0.9, 0.9);
 
-    // Intensity adjustment for smooth color variation
-    let intensity = (noise_value * 0.5 + 0.5).clamp(0.0, 1.0);
-    let varied_color = base_color * intensity;
+    let land_threshold = 0.3;
 
-    // Directional lighting for highlights
-    let light_dir = Vec3::new(1.0, 1.0, 1.0).normalize();
+    let base_color = if base_noise_value > land_threshold {
+        land_color_1.lerp(&land_color_2, (base_noise_value - land_threshold) / (1.0 - land_threshold))
+    } else {
+        water_color_1.lerp(&water_color_2, base_noise_value / land_threshold)
+    };
+
+    let light_position = Vec3::new(1.0, 1.0, 3.0);
+    let light_dir = (light_position - fragment.vertex_position).normalize();
     let normal = fragment.normal.normalize();
-    let diffuse_intensity = normal.dot(&light_dir).max(0.0);
-    if diffuse_intensity.is_nan() || diffuse_intensity.is_infinite() {
+    let diffuse = normal.dot(&light_dir).max(0.0);
+    if diffuse.is_nan() || diffuse.is_infinite() {
         panic!("Diffuse calculation resulted in NaN or infinity!");
     }
-    let ambient_intensity = 0.3; // Base ambient light
-    let lit_color = varied_color * (ambient_intensity + (1.0 - ambient_intensity) * diffuse_intensity);
 
-    (lit_color, 0)
+    let lit_color = base_color * (0.1 + 0.9 * diffuse);
+
+    let cloud_threshold = 0.1;
+    let cloud_opacity = 0.3 + 0.2 * ((time as f32 / 1000.0) * 0.3).sin().abs();
+    if cloud_noise_value > cloud_threshold {
+        let cloud_intensity = ((cloud_noise_value - cloud_threshold) / (1.0 - cloud_threshold)).clamp(0.0, 1.0);
+        (lit_color.blend_add(&(cloud_color * (cloud_intensity * cloud_opacity))), 0)
+    } else {
+        (lit_color, 0)
+    }
 }
 
 pub fn uranus_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {

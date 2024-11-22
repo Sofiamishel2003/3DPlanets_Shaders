@@ -109,9 +109,12 @@ fn create_mercury_noise() -> FastNoiseLite {
 
 fn create_uranus_noise() -> FastNoiseLite {
     let mut noise = FastNoiseLite::with_seed(42);
-    noise.set_noise_type(Some(NoiseType::Perlin));  // Smooth noise for Uranus
-    noise.set_fractal_type(Some(FractalType::None)); 
-    noise.set_frequency(Some(0.01));               
+    noise.set_noise_type(Some(NoiseType::Perlin));  // Replace Simplex with Perlin
+    noise.set_fractal_type(Some(FractalType::FBm)); 
+    noise.set_fractal_octaves(Some(4));              
+    noise.set_fractal_lacunarity(Some(2.2));         
+    noise.set_fractal_gain(Some(0.5));               
+    noise.set_frequency(Some(0.008));               
     noise
 }
 
