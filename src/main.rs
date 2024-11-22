@@ -20,7 +20,7 @@ use obj::Obj;
 use camera::Camera;
 use triangle::triangle;
 use shaders::{vertex_shader,sun_shader, fragment_shader, time_based_color_cycling_shader, mars_shader_wrapper, earth_shader_wrapper
-    ,jupiter_shader_wrapper,mercury_shader_wrapper, uranus_shader_wrapper,saturn_shader_wrapper, disco_ball_shader, saturn_ring_shader };
+    ,jupiter_shader_wrapper,mercury_shader_wrapper, uranus_shader_wrapper,saturn_shader_wrapper, saturn_ring_shader };
 
 pub struct Uniforms {
     model_matrix: Mat4,
