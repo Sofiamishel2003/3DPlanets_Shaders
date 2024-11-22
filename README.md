@@ -46,32 +46,32 @@ Este es un proyecto de renderización gráfica desarrollado en **Rust**, que sim
 
 ## 🖼️ Galería de planetas
 
-1. **Sol** 🌞
+1. **Sol** 🌞 (estrella)
    - Descripción: Textura dinámica simulando el brillo solar con patrones pulsantes.
    - ![Planetas (7)](https://github.com/user-attachments/assets/057846fc-d3ab-403d-812c-4fe5a2199e3b)
 
 
-2. **Marte** 🔴
+2. **Marte** 🔴 (planeta rocoso)
    - Descripción: Superficie rocosa con tonos rojizos y cráteres.
    - ![image](https://github.com/user-attachments/assets/e2f2cb67-dbda-4aeb-86ea-c78693bfa897)
 
-3. **Tierra** 🌍
+3. **Tierra** 🌍 (planeta rocoso)
    - Descripción: Representación con océanos, continentes y animación de nubes.
+   - ![Planetas (8)](https://github.com/user-attachments/assets/9dbad704-babf-49b3-9c08-93185a586c83)
 
-4. **Júpiter** 🟠
+4. **Júpiter** 🟠(gigante gaseoso)
    - Descripción: Bandas de gases en tonos anaranjados y beige.
+   - ![image](https://github.com/user-attachments/assets/3aedc07d-40de-4d5d-bf71-25795ccdd56e)
 
-5. **Mercurio** ⚪
+5. **Mercurio** ⚪(planeta rocoso)
    - Descripción: Superficie gris metálico con cráteres.
    - ![image](https://github.com/user-attachments/assets/2505133a-2d50-4d0e-9e68-0c823fcb5aea)
 
-
-6. **Urano** 🟦
+6. **Urano** 🟦 (gigante gaseoso)
    - Descripción: Tono azul claro con efectos de atmósfera gaseosa.
-   - ![image](https://github.com/user-attachments/assets/be69fc5e-7b49-463e-8f45-ac026f098d32)
+   - ![image](https://github.com/user-attachments/assets/94a4a09d-9349-462c-aed3-0b06a2c29a5f)
 
-
-7. **Saturno** 🪐
+7. **Saturno** 🪐(gigante gaseoso)
    - Descripción: Bandas de gases similares a Júpiter con anillos dinámicos.
    - ![image](https://github.com/user-attachments/assets/580d43e6-3ace-4161-987c-10f46ba9982b)
 
