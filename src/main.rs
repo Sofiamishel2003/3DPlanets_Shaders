@@ -20,7 +20,7 @@ use obj::Obj;
 use camera::Camera;
 use triangle::triangle;
 use shaders::{vertex_shader,sun_shader, fragment_shader, time_based_color_cycling_shader, mars_shader_wrapper, earth_shader_wrapper
-    ,jupiter_shader_wrapper,mercury_shader_wrapper, uranus_shader_wrapper,saturn_shader_wrapper, saturn_ring_shader };
+    ,jupiter_shader_wrapper,mercury_shader_wrapper, uranus_shader_wrapper,saturn_shader_wrapper, saturn_ring_shader,moon_shader_wrapper};
 
 pub struct Uniforms {
     model_matrix: Mat4,
@@ -329,7 +329,29 @@ fn main() {
             _ => time_based_color_cycling_shader,
         };        
             render(&mut framebuffer, &uniforms, &vertex_arrays, planet_shader);
-            if current_planet == 7 {
+            if current_planet == 3 { 
+                // Calcular y renderizar la luna
+                let moon_scale = 0.35; // Escala de la luna respecto a la Tierra
+                let moon_distance = 1.8; // Distancia de la luna a la Tierra
+                let moon_orbit_speed = 0.5; // Velocidad orbital de la luna
+            
+                let moon_angle = time as f32 * moon_orbit_speed;
+                let moon_x = moon_distance * moon_angle.cos();
+                let moon_z = moon_distance * moon_angle.sin();
+            
+                let moon_translation = Vec3::new(moon_x, 0.0, moon_z);
+                let moon_model_matrix = create_model_matrix(
+                        moon_translation,
+                        moon_scale, 
+                        Vec3::new(0.0, 0.0, 0.0),
+                        aspect_ratio,
+                );
+                uniforms.model_matrix = moon_model_matrix;
+            
+                render(&mut framebuffer, &uniforms, &vertex_arrays, moon_shader_wrapper);
+            }
+            
+            else if current_planet == 7 {
                 let ring_translation = Vec3::new(0.0, 0.0, 0.1); // Mover anillos hacia adelante
                 uniforms.model_matrix = create_model_matrix(
                     ring_translation, // Ajustar la posición para evitar solapamiento

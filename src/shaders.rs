@@ -547,3 +547,46 @@ pub fn mercury_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color
     // Devolvemos el color final multiplicado por la intensidad del fragmento
     final_color * fragment.intensity
 }
+pub fn moon_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    // Colores base para la luna (grises y tonos tierra)
+    let base_gray = Color::from_float(0.7, 0.7, 0.7); // Gris claro
+    let dark_gray = Color::from_float(0.4, 0.4, 0.4); // Gris oscuro
+    let crater_highlight = Color::from_float(0.8, 0.8, 0.8); // Gris brillante para bordes de cráteres
+
+    // Coordenadas del fragmento
+    let position = fragment.vertex_position;
+    let noise_scale = 50.0; // Escala para el ruido de cráteres
+
+    // Generar ruido para simular cráteres y variaciones de textura
+    let noise_value = uniforms.noise.get_noise_2d(
+        position.x * noise_scale,
+        position.y * noise_scale,
+    );
+
+    let fine_noise = uniforms.noise.get_noise_2d(
+        position.x * noise_scale * 2.0,
+        position.y * noise_scale * 2.0,
+    );
+
+    // Mezclar colores en base al ruido
+    let base_color = base_gray.lerp(&dark_gray, noise_value.clamp(0.0, 1.0));
+
+    // Añadir un efecto de borde brillante en los cráteres
+    let crater_effect = fine_noise.abs().clamp(0.0, 1.0);
+    let crater_color = base_color.lerp(&crater_highlight, crater_effect * 0.5);
+
+    // Iluminación difusa
+    let light_position = Vec3::new(2.0, 2.0, 5.0); // Posición de la luz (el "sol")
+    let light_dir = normalize(&(light_position - fragment.vertex_position));
+    let normal = normalize(&fragment.normal);
+    let diffuse = dot(&normal, &light_dir).max(0.0);
+
+    // Combinar iluminación con color base
+    let final_color = crater_color * (0.3 + 0.7 * diffuse);
+
+    // Retornar color final
+    final_color * fragment.intensity
+}
+pub fn moon_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    moon_shader(fragment, uniforms)
+}
