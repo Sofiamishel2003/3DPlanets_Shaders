@@ -20,7 +20,7 @@ use obj::Obj;
 use camera::Camera;
 use triangle::triangle;
 use shaders::{vertex_shader,sun_shader, fragment_shader, time_based_color_cycling_shader, mars_shader_wrapper, earth_shader_wrapper
-    ,jupiter_shader_wrapper,mercury_shader_wrapper, uranus_shader_wrapper,venus_shader_wrapper, disco_ball_shader};
+    ,jupiter_shader_wrapper,mercury_shader_wrapper, uranus_shader_wrapper,saturn_shader_wrapper, disco_ball_shader, saturn_ring_shader };
 
 pub struct Uniforms {
     model_matrix: Mat4,
@@ -115,14 +115,14 @@ fn create_uranus_noise() -> FastNoiseLite {
     noise
 }
 
-fn create_venus_noise() -> FastNoiseLite {
-    let mut noise = FastNoiseLite::with_seed(9876); // Unique seed for Venus
-    noise.set_noise_type(Some(NoiseType::Perlin));  // Smooth noise for clouds
-    noise.set_fractal_type(Some(FractalType::FBm)); // Fractal noise for cloud depth
-    noise.set_fractal_octaves(Some(5));             // Moderate detail
-    noise.set_fractal_lacunarity(Some(2.2));        // Emphasize cloud patterns
-    noise.set_fractal_gain(Some(0.45));             // Balanced detail
-    noise.set_frequency(Some(0.005));              // Adjust frequency for smooth cloud features
+fn create_saturn_noise() -> FastNoiseLite {
+    let mut noise = FastNoiseLite::with_seed(42);
+    noise.set_noise_type(Some(NoiseType::Perlin));  // Perlin for banded structure
+    noise.set_fractal_type(Some(FractalType::FBm)); // Add depth to bands
+    noise.set_fractal_octaves(Some(6));             // Detailed turbulence
+    noise.set_fractal_lacunarity(Some(1.8));        // Emphasize band transitions
+    noise.set_fractal_gain(Some(0.45));             // Enhance smaller turbulence
+    noise.set_frequency(Some(0.02));               // Scale of gas bands
     noise
 }
 fn create_moon_noise() -> FastNoiseLite {
@@ -196,7 +196,7 @@ fn create_viewport_matrix(width: f32, height: f32) -> Mat4 {
         0.0, 0.0, 0.0, 1.0
     )
 }
-
+// Renders ------------------------------------------------------------------------------------------------------------------------------------------------
 fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Vertex], planet_shader: fn(&Fragment, &Uniforms) -> Color) {
     let mut transformed_vertices = Vec::with_capacity(vertex_array.len());
     for vertex in vertex_array {
@@ -230,6 +230,7 @@ fn render(framebuffer: &mut Framebuffer, uniforms: &Uniforms, vertex_array: &[Ve
         }
     }
 }
+
 // Main -------------------------------------------------------------------------------------------------------------------------------------
 fn main() {
     let window_width = 800;
@@ -249,7 +250,7 @@ fn main() {
     window.set_position(500, 500);
     window.update();
 
-    framebuffer.set_background_color(0x333355);
+    framebuffer.set_background_color(0x000000);
 
     let translation = Vec3::new(0.0, 0.0, 0.0);
     let rotation = Vec3::new(0.0, 0.0, 0.0);
@@ -260,9 +261,14 @@ fn main() {
         Vec3::new(0.0, 0.0, 0.0),
         Vec3::new(0.0, 1.0, 0.0)
     );
-
+    //planeta
     let obj = Obj::load("assets/sphere.obj").expect("Failed to load obj");
-    let vertex_arrays = obj.get_vertex_array(); 
+    let vertex_arrays = obj.get_vertex_array();
+    //Anillo 
+    let rings_obj = Obj::load("assets/ring.obj").expect("Failed to load rings.obj");
+    let rings_vertex_arrays = rings_obj.get_vertex_array();
+    println!("Rings loaded with {} vertices", rings_obj.get_vertex_array().len());
+
     let mut time = 0;
     let mut current_planet = 1;
     while window.is_open() {
@@ -294,7 +300,7 @@ fn main() {
             4 => create_jupiter_noise(),
             5 => create_mercury_noise(),
             6 => create_uranus_noise(),
-            7 => create_venus_noise(),  // Add Venus
+            7 => create_saturn_noise(),  // Add saturn
             _ => FastNoiseLite::with_seed(0),
         };
         let aspect_ratio = window_width as f32 / window_height as f32;
@@ -302,7 +308,7 @@ fn main() {
         let view_matrix = create_view_matrix(camera.eye, camera.center, camera.up);
         let projection_matrix = create_perspective_matrix(window_width as f32, window_height as f32);
         let viewport_matrix = create_viewport_matrix(framebuffer_width as f32, framebuffer_height as f32);
-        let uniforms = Uniforms { 
+        let mut uniforms = Uniforms { 
             model_matrix, 
             view_matrix, 
             projection_matrix, 
@@ -319,12 +325,25 @@ fn main() {
             4 => jupiter_shader_wrapper,
             5 => mercury_shader_wrapper,
             6 => uranus_shader_wrapper,
-            7 => venus_shader_wrapper,
+            7 => saturn_shader_wrapper,
             _ => time_based_color_cycling_shader,
-        };
-
-        render(&mut framebuffer, &uniforms, &vertex_arrays, planet_shader);
-
+        };        
+            render(&mut framebuffer, &uniforms, &vertex_arrays, planet_shader);
+            if current_planet == 7 {
+                let ring_translation = Vec3::new(0.0, 0.0, 0.1); // Mover anillos hacia adelante
+                uniforms.model_matrix = create_model_matrix(
+                    ring_translation, // Ajustar la posición para evitar solapamiento
+                    0.5,              // Escala ajustada para los anillos
+                    Vec3::new(0.0, PI / 2.0, 0.0), // Rotación sobre el eje Y
+                    aspect_ratio,
+                );
+            
+                render(&mut framebuffer, &uniforms, &rings_vertex_arrays, |fragment, uniforms| {
+                    shaders::saturn_ring_shader(fragment, uniforms)
+                });
+            
+            }
+            
         window
             .update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height)
             .unwrap();

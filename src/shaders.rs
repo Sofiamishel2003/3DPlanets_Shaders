@@ -1,5 +1,6 @@
-use nalgebra_glm::{Vec3, Vec4, Mat3, dot, mat4_to_mat3,normalize};
+use nalgebra_glm::{Vec2,Vec3, Vec4, Mat3, dot, mat4_to_mat3,normalize};
 use crate::vertex::Vertex;
+
 use crate::Uniforms;
 use crate::fragment::Fragment;
 use crate::color::Color;
@@ -426,41 +427,90 @@ pub fn uranus_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color 
     color
 }
 
-pub fn venus_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
-    // Base Venus colors
-    let yellow_haze = Color::from_float(0.9, 0.8, 0.5); // Hazy yellow
-    let orange_haze = Color::from_float(0.8, 0.6, 0.3); // Deep orange tones
+pub fn saturn_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
+    let latitude = fragment.vertex_position.y;
+    let band_frequency = 10.0;
 
-    // Generate cloud patterns
-    let cloud_noise_value = uniforms.noise.get_noise_3d(
-        fragment.vertex_position.x,
-        fragment.vertex_position.y,
-        fragment.vertex_position.z,
+    let band_noise = uniforms.noise.get_noise_2d(
+        fragment.vertex_position.x * 2.0,
+        fragment.vertex_position.y * 2.0,
     );
+    let band_noise_intensity = 0.2;
+    let distorted_latitude = latitude + band_noise * band_noise_intensity;
+    let band_pattern = (distorted_latitude * band_frequency).sin();
 
-    // Cloud opacity adjustment based on noise
-    let cloud_opacity = (cloud_noise_value + 1.0) * 0.5; // Normalize to [0, 1]
+    let band_colors = [
+        Color::from_hex(0xc6bcad),
+        Color::from_hex(0x955d36),
+        Color::from_hex(0xc7c7cf),
+    ];
 
-    // Add directional lighting
-    let light_pos = Vec3::new(0.0, 8.0, 9.0);
-    let light_dir = (light_pos - fragment.vertex_position).normalize();
+    let normalized_band = (band_pattern + 1.0) / 2.0 * (band_colors.len() as f32 - 1.0);
+    let index = normalized_band.floor() as usize;
+    let t = normalized_band.fract();
+    let color1 = band_colors[index % band_colors.len()];
+    let color2 = band_colors[(index + 1) % band_colors.len()];
+    let base_color = color1.lerp(&color2, t);
+
+    let turbulence_intensity = 0.3;
+    let turbulence_color = base_color.lerp(&Color::from_hex(0xffffff), turbulence_intensity);
+
+    let light_position = Vec3::new(0.0, 8.0, 9.0);
+    let light_direction = (light_position - fragment.vertex_position).normalize();
     let normal = fragment.normal.normalize();
-    let diffuse_intensity = normal.dot(&light_dir).max(0.0);
-    if diffuse_intensity.is_nan() || diffuse_intensity.is_infinite() {
+    let diffuse = normal.dot(&light_direction).max(0.0);
+    if diffuse.is_nan() || diffuse.is_infinite() {
         panic!("Diffuse calculation resulted in NaN or infinity!");
     }
 
-    // Combine base colors with cloud opacity and lighting
-    let base_color = yellow_haze.lerp(&orange_haze, cloud_opacity);
-    let lit_color = base_color * (0.3 + 0.7 * diffuse_intensity);
+    let ambient_intensity = 0.15;
+    let ambient_color = turbulence_color * ambient_intensity;
+    let lit_color = turbulence_color * diffuse;
 
-    (lit_color, 0)
+    (ambient_color + lit_color, 0)
 }
 
-pub fn venus_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
-    let (color, _extra) = venus_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
+pub fn saturn_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let (color, _extra) = jupiter_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
     color
 }
+pub fn saturn_ring_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let ring_position = Vec2::new(fragment.vertex_position.x, fragment.vertex_position.z);
+    let distance_from_center = ring_position.magnitude(); // Distancia radial al centro
+
+    let num_bands = 8; // Más bandas para los anillos
+    let max_distance = 1.5; // Tamaño reducido
+    let band_width = max_distance / num_bands as f32;
+
+    let band_index = (distance_from_center / band_width).floor() as i32;
+
+    let band_colors = [
+        Color::new(225, 190, 160), // Marrón claro
+        Color::new(245, 230, 200), // Beige claro
+        Color::new(255, 255, 240), // Blanco crema
+        Color::new(200, 180, 150), // Marrón pálido
+        Color::new(230, 210, 190), // Beige intermedio
+    ];
+
+    let base_color = band_colors[(band_index.abs() as usize) % band_colors.len()];
+
+    let edge_distance = (distance_from_center % band_width) / band_width;
+    let smooth_edge = (1.0 - edge_distance).clamp(0.0, 1.0);
+
+    let light_position = Vec3::new(1.0, 1.0, 3.0);
+    let light_dir = normalize(&(light_position - fragment.vertex_position));
+    let normal = normalize(&fragment.normal);
+    let diffuse_intensity = dot(&normal, &light_dir).max(0.0);
+
+    let ambient_intensity = 0.3;
+    let final_light_factor = ambient_intensity + (1.0 - ambient_intensity) * diffuse_intensity;
+
+    let lit_color = base_color * smooth_edge * final_light_factor;
+
+    let noise = uniforms.noise.get_noise_2d(ring_position.x * 10.0, ring_position.y * 10.0) * 0.1;
+    lit_color * (1.0 + noise)
+}
+
 
 pub fn mercury_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
     // Colores base para la superficie rocosa con tonos de gris-dorado
