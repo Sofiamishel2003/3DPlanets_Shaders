@@ -316,80 +316,117 @@ pub fn earth_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
 }
 
 
-pub fn jupiter_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
-    let latitude = fragment.vertex_position.y;
-    let band_frequency = 10.0;
-
-    let band_noise = uniforms.noise.get_noise_2d(
-        fragment.vertex_position.x * 2.0,
-        fragment.vertex_position.y * 2.0,
-    );
-    let band_noise_intensity = 0.2;
-    let distorted_latitude = latitude + band_noise * band_noise_intensity;
-    let band_pattern = (distorted_latitude * band_frequency).sin();
-
-    let band_colors = [
-        Color::from_hex(0xc6bcad),
-        Color::from_hex(0x955d36),
-        Color::from_hex(0xc7c7cf),
+pub fn jupiter_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
+    let base_colors = [
+        Vec3::new(0.87, 0.67, 0.44), // Beige marrón
+        Vec3::new(0.96, 0.80, 0.69), // Beige claro
+        Vec3::new(0.75, 0.50, 0.31), // Marrón oscuro
+        Vec3::new(1.00, 0.65, 0.40), // Naranja claro
+        Vec3::new(0.95, 0.90, 0.75), // Blanco crema
     ];
 
-    let normalized_band = (band_pattern + 1.0) / 2.0 * (band_colors.len() as f32 - 1.0);
-    let index = normalized_band.floor() as usize;
-    let t = normalized_band.fract();
-    let color1 = band_colors[index % band_colors.len()];
-    let color2 = band_colors[(index + 1) % band_colors.len()];
-    let base_color = color1.lerp(&color2, t);
+    let time = uniforms.time as f32 * 0.001;
+    let dynamic_y = fragment.vertex_position.y + time;
 
-    let turbulence_intensity = 0.3;
-    let turbulence_color = base_color.lerp(&Color::from_hex(0xffffff), turbulence_intensity);
+    let distortion_scale = 10.0;
+    let distortion_value = uniforms.noise.get_noise_2d(
+        fragment.vertex_position.x * distortion_scale,
+        dynamic_y * distortion_scale,
+    );
 
-    let light_position = Vec3::new(0.0, 8.0, 9.0);
-    let light_direction = (light_position - fragment.vertex_position).normalize();
-    let normal = fragment.normal.normalize();
-    let diffuse = normal.dot(&light_direction).max(0.0);
-    if diffuse.is_nan() || diffuse.is_infinite() {
-        panic!("Diffuse calculation resulted in NaN or infinity!");
+    let distorted_y = dynamic_y + distortion_value * 0.1 + fragment.vertex_position.x * 0.05;
+
+    let band_frequency = 40.0;
+    let band_sine = (distorted_y * band_frequency).sin();
+    let band_variation = (fragment.vertex_position.y * 10.0).sin() * 0.3;
+    let band_index_float = (band_sine + band_variation + 1.0) / 2.0 * (base_colors.len() as f32);
+    let band_index = band_index_float as usize % base_colors.len();
+    let mut rng = rand::thread_rng();
+    let random_offset: f32 = rng.gen_range(-0.03..0.03);
+    let base_band_color =
+        base_colors[band_index] + Vec3::new(random_offset, random_offset, random_offset);
+
+    // Aumentar la saturación de algunas bandas de forma aleatoria
+    let saturation_boost: f32 = if rng.gen_bool(0.5) { 1.2 } else { 1.0 };
+    let boosted_band_color = base_band_color * saturation_boost;
+
+    // Se elige el siguiente color de banda para suavizar la transición
+    let next_band_index = (band_index + 1) % base_colors.len();
+    let next_band_color =
+        base_colors[next_band_index] + Vec3::new(random_offset, random_offset, random_offset);
+
+    // Interpolación suave entre colores adyacentes
+    let interpolation_factor = band_index_float.fract();
+    let interpolated_color = boosted_band_color.lerp(&next_band_color, interpolation_factor);
+
+    // capas de ruido de alta frecuencia para dar más textura a las bandas
+    let noise_scale_1 = 80.0;
+    let noise_value_1 = uniforms.noise.get_noise_2d(
+        fragment.vertex_position.x * noise_scale_1,
+        fragment.vertex_position.y * noise_scale_1,
+    );
+
+    let noise_scale_2 = 40.0;
+    let noise_value_2 = uniforms.noise.get_noise_2d(
+        fragment.vertex_position.x * noise_scale_2,
+        fragment.vertex_position.y * noise_scale_2,
+    );
+
+    let perturbed_color = interpolated_color * (0.95 + (noise_value_1 + noise_value_2) * 0.015);
+
+    let internal_shadow = (distorted_y * band_frequency * 0.1).sin().abs() * 0.15;
+    let shaded_color = perturbed_color * (1.0 - internal_shadow);
+
+    let shadow_noise_scale = 50.0;
+    let shadow_noise = uniforms.noise.get_noise_2d(
+        fragment.vertex_position.x * shadow_noise_scale,
+        fragment.vertex_position.y * shadow_noise_scale,
+    );
+    let shadow_variation = 1.0 - shadow_noise * 0.05;
+    let final_shaded_color = shaded_color * shadow_variation;
+    let spot_noise_scale = 25.0;
+    let spot_noise = uniforms.noise.get_noise_2d(
+        fragment.vertex_position.x * spot_noise_scale,
+        fragment.vertex_position.y * spot_noise_scale,
+    );
+
+    let mut final_color;
+
+    if spot_noise > 0.75 {
+        let mix_factor = (spot_noise - 0.75) / 0.25;
+        let storm_color = Vec3::new(0.95, 0.85, 0.65);
+        final_color = final_shaded_color.lerp(&storm_color, mix_factor);
+    } else {
+        final_color = final_shaded_color;
     }
 
-    let ambient_intensity = 0.15;
-    let ambient_color = turbulence_color * ambient_intensity;
-    let lit_color = turbulence_color * diffuse;
+    let normal = fragment.vertex_position.normalize();
 
-    (ambient_color + lit_color, 0)
+    let light_dir = Vec3::new(0.6, 0.8, 0.4).normalize();
+    let lambertian = light_dir.dot(&normal).max(0.0);
+    let shading_factor = 0.75 + 0.25 * lambertian;
+
+    final_color = final_color * shading_factor;
+
+    // dispersión atmosférica
+    let gradient_shading = 1.0 - (fragment.vertex_position.y.abs() * 0.15);
+    final_color = final_color * gradient_shading;
+
+    // reflejos especulares para simular brillos en la atmósfera
+    let view_dir = Vec3::new(0.0, 0.0, 1.0).normalize();
+    let reflect_dir = (2.0 * normal.dot(&light_dir) * normal - light_dir).normalize();
+    let specular_intensity = view_dir.dot(&reflect_dir).max(0.0).powf(10.0);
+
+    final_color = final_color + Vec3::new(1.0, 1.0, 1.0) * specular_intensity * 0.15;
+
+    final_color = final_color * fragment.intensity;
+
+    Color::new(
+        (final_color.x * 255.0) as u8,
+        (final_color.y * 255.0) as u8,
+        (final_color.z * 255.0) as u8,
+    )
 }
-
-pub fn jupiter_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
-    let (color, _extra) = jupiter_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
-    color
-}
-
-
-pub fn mercury_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Color, u32) {
-    let noise_value = uniforms.noise.get_noise_2d(fragment.vertex_position.x, fragment.vertex_position.y);
-
-    let gray_light = Color::from_float(0.7, 0.7, 0.7);
-    let gray_dark = Color::from_float(0.4, 0.4, 0.4);
-    let brown = Color::from_float(0.5, 0.4, 0.3);
-
-    let lerp_factor = noise_value.clamp(0.0, 1.0);
-    let base_color = gray_light.lerp(&gray_dark, lerp_factor).lerp(&brown, lerp_factor * 0.5);
-
-    let light_pos = Vec3::new(0.0, 8.0, 9.0);
-    let light_dir = (light_pos - fragment.vertex_position).normalize();
-    let normal = fragment.normal.normalize();
-    let diffuse_intensity = normal.dot(&light_dir).max(0.0);
-    if diffuse_intensity.is_nan() || diffuse_intensity.is_infinite() {
-        panic!("Diffuse calculation resulted in NaN or infinity!");
-    }
-
-    let lit_color = base_color * diffuse_intensity;
-    let ambient_intensity = 0.2;
-    let ambient_color = base_color * ambient_intensity;
-
-    (ambient_color + lit_color, 0)
-}
-
 
 
 
@@ -471,7 +508,7 @@ pub fn saturn_shader(fragment: &Fragment, uniforms: &Uniforms, time: u32) -> (Co
 }
 
 pub fn saturn_shader_wrapper(fragment: &Fragment, uniforms: &Uniforms) -> Color {
-    let (color, _extra) = jupiter_shader(fragment, uniforms, 0); // Replace `0` with actual `time` if needed
+    let (color, _extra) = saturn_shader(fragment, uniforms, 0); 
     color
 }
 pub fn saturn_ring_shader(fragment: &Fragment, uniforms: &Uniforms) -> Color {
